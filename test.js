@@ -7,9 +7,9 @@ var should = require('should');
 Based on https://github.com/koajs/session/blob/master/test.js
  */
 
-describe('Koa Session Store', function(){
+describe('Koa Session Store', function() {
   var cookie, httpServer;
-  
+
   afterEach(function(done) {
     if (httpServer) {
       httpServer.close(done);
@@ -21,13 +21,13 @@ describe('Koa Session Store', function(){
   describe('cookie options', function() {
     describe('when signed = true', function() {
       describe('when app keys are set', function() {
-        it('should work', function(done){
-          var app = koa();
+        it('should work', function(done) {
+          var app = new koa();
           app.keys = ['a', 'b'];
           app.use(session());
-          app.use(function *(){
-            this.session.message = 'hi';
-            this.body = this.session;
+          app.use(async(ctx, next) => {
+            ctx.session.message = 'hi';
+            ctx.response.body = ctx.session;
           });
 
           request(httpServer = app.listen())
@@ -37,12 +37,12 @@ describe('Koa Session Store', function(){
       });
 
       describe('when app keys are not set', function() {
-        it('should NOT work', function(done){
-          var app = koa();
+        it('should NOT work', function(done) {
+          var app = new koa();
           app.use(session());
-          app.use(function *(){
-            this.session.message = 'hi';
-            this.body = this.session;
+          app.use((ctx, next) => {
+            ctx.session.message = 'hi';
+            ctx.response.body = ctx.session;
           });
 
           request(httpServer = app.listen())
@@ -54,16 +54,16 @@ describe('Koa Session Store', function(){
 
     describe('when signed = false', function() {
       describe('when app keys are not set', function() {
-        it('should work', function(done){
-          var app = koa();
+        it('should work', function(done) {
+          var app = new koa();
           app.use(session({
             cookie: {
               signed: false
             }
           }));
-          app.use(function *(){
-            this.session.message = 'hi';
-            this.body = this.session;
+          app.use((ctx, next) => {
+            ctx.session.message = 'hi';
+            ctx.response.body = ctx.session;
           });
 
           request(httpServer = app.listen())
@@ -76,16 +76,16 @@ describe('Koa Session Store', function(){
 
   describe('Storage: Cookie', function() {
 
-    describe('new session', function(){
-      describe('when not accessed', function(){
+    describe('new session', function() {
+      describe('when not accessed', function() {
         it('should not set the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.body = 'greetings';
+          app.use(async(ctx, next) => {
+            ctx.response.body = 'greetings';
           });
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
@@ -93,15 +93,15 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('when accessed and not populated', function(){
+      describe('when accessed and not populated', function() {
         it('should not set the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.body = this.session;
+          app.use(async(ctx, next) => {
+            ctx.response.body = ctx.session;
           });
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
@@ -109,18 +109,18 @@ describe('Koa Session Store', function(){
         })
       });
 
-      describe('when accessed and populated', function(){
-        it('should set the cookie', function(done){
+      describe('when accessed and populated', function() {
+        it('should set the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session.message = 'hello';
-            this.body = '';
+          app.use(async(ctx, next) => {
+            ctx.session.message = 'hello';
+            ctx.response.body = '';
           });
           request(httpServer = app.listen())
             .get('/')
             .expect('Set-Cookie', /koa:sess/)
             .expect('Set-Cookie', /hello/)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               cookie = res.header['set-cookie'].join(';');
               done();
@@ -129,17 +129,17 @@ describe('Koa Session Store', function(){
       });
     });
 
-    describe('saved session', function(){
-      describe('when not accessed', function(){
-        it('should not set the cookie', function(done){
+    describe('saved session', function() {
+      describe('when not accessed', function() {
+        it('should not set the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
             .set('Cookie', cookie)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
@@ -147,12 +147,12 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('when accessed but not changed', function(){
-        it('should be the same session', function(done){
+      describe('when accessed but not changed', function() {
+        it('should be the same session', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session.message.should.equal('hello');
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message.should.equal('hello');
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -160,16 +160,16 @@ describe('Koa Session Store', function(){
             .expect(200, done);
         });
 
-        it('should not set the cookie', function(done){
+        it('should not set the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session.message.should.equal('hello');
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message.should.equal('hello');
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
             .set('Cookie', cookie)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
@@ -177,12 +177,12 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('when accessed and changed', function(){
-        it('should set the cookie', function(done){
+      describe('when accessed and changed', function() {
+        it('should set the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session.message = 'hello2';
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message = 'hello2';
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -193,13 +193,13 @@ describe('Koa Session Store', function(){
       });
     });
 
-    describe('when session = ', function(){
-      describe('null', function(){
-        it('should expire the cookie', function(done){
+    describe('when session = ', function() {
+      describe('null', function() {
+        it('should expire the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session = null;
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = null;
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
@@ -209,16 +209,16 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('{}', function(){
-        it('should not set the cookie', function(done){
+      describe('{}', function() {
+        it('should not set the cookie', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session = {};
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = {};
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
@@ -226,12 +226,14 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('{a: b}', function(){
-        it('should create a session', function(done){
+      describe('{a: b}', function() {
+        it('should create a session', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session = { message: 'hello' };
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = {
+              message: 'hello'
+            };
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
@@ -240,11 +242,11 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('anything else', function(){
-        it('should throw', function(done){
+      describe('anything else', function() {
+        it('should throw', function(done) {
           var app = App();
-          app.use(function *(){
-            this.session = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = 'asdf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -260,14 +262,14 @@ describe('Koa Session Store', function(){
 
     var db = {};
     var layer = {
-      load: function*(sid) {
+      load: async function(sid) {
         return db[sid];
       },
-      save: function*(sid, data) {
+      save: async function(sid, data) {
         layer.saveCount++;
         db[sid] = data;
       },
-      remove: function*(sid) {
+      remove: async function(sid) {
         delete db[sid];
       }
     };
@@ -289,16 +291,16 @@ describe('Koa Session Store', function(){
       }
     });
 
-    describe('new session', function(){
-      describe('when not accessed', function(){
+    describe('new session', function() {
+      describe('when not accessed', function() {
         it('should not set the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.body = 'greetings';
+          app.use(async(ctx, next) => {
+            ctx.response.body = 'greetings';
           });
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
@@ -306,12 +308,12 @@ describe('Koa Session Store', function(){
         });
         it('should not set any data', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.body = 'greetings';
+          app.use(async(ctx, next) => {
+            ctx.response.body = 'greetings';
           });
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               layer.saveCount.should.eql(0);
               db.should.eql({});
@@ -320,15 +322,15 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('when accessed and not populated', function(){
+      describe('when accessed and not populated', function() {
         it('should not set the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.body = this.session;
+          app.use(async(ctx, next) => {
+            ctx.response.body = ctx.session;
           });
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
@@ -336,12 +338,12 @@ describe('Koa Session Store', function(){
         });
         it('should not set any data', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.body = this.session;
+          app.use(async(ctx, next) => {
+            ctx.response.body = ctx.session;
           });
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               layer.saveCount.should.eql(0);
               db.should.eql({});
@@ -350,67 +352,69 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('when accessed and populated', function(){
-        it('should set the cookie', function(done){
+      describe('when accessed and populated', function() {
+        it('should set the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session.message = 'hello';
-            this.body = '';
+          app.use(async(ctx, next) => {
+            ctx.session.message = 'hello';
+            ctx.response.body = '';
           });
           request(httpServer = app.listen())
             .get('/')
             .expect('Set-Cookie', /koa:sess/)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               cookie = res.header['set-cookie'].join(';');
               cookie.indexOf('hello').should.eql(-1);
               done();
             });
         });
-        it('should set data', function(done){
+        it('should set data', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session.message = 'hello';
-            this.body = '';
+          app.use(async(ctx, next) => {
+            ctx.session.message = 'hello';
+            ctx.response.body = '';
           });
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               layer.saveCount.should.eql(1);
               for (var key in db) break;
-              db[key].should.eql(JSON.stringify({ message: 'hello' }));
+              db[key].should.eql(JSON.stringify({
+                message: 'hello'
+              }));
               done();
             });
         });
       });
     });
 
-    describe('saved session', function(){
-      describe('when not accessed', function(){
-        it('should not set the cookie', function(done){
+    describe('saved session', function() {
+      describe('when not accessed', function() {
+        it('should not set the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
             .set('Cookie', cookie)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
             });
         });
-        it('should not set the data', function(done){
+        it('should not set the data', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
             .set('Cookie', cookie)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               layer.saveCount.should.eql(0);
               done();
@@ -418,12 +422,12 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('when accessed but not changed', function(){
-        it('should be the same session', function(done){
+      describe('when accessed but not changed', function() {
+        it('should be the same session', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session.message.should.equal('hello');
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message.should.equal('hello');
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -431,31 +435,31 @@ describe('Koa Session Store', function(){
             .expect(200, done);
         });
 
-        it('should not set the cookie', function(done){
+        it('should not set the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session.message.should.equal('hello');
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message.should.equal('hello');
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
             .set('Cookie', cookie)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
             });
         });
-        it('should not set the data', function(done){
+        it('should not set the data', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session.message.should.equal('hello');
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message.should.equal('hello');
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
             .set('Cookie', cookie)
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               layer.saveCount.should.eql(0);
               done();
@@ -463,12 +467,12 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('when accessed and changed', function(){
-        it('should not set the cookie', function(done){
+      describe('when accessed and changed', function() {
+        it('should not set the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session.message = 'hello2';
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message = 'hello2';
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -479,13 +483,15 @@ describe('Koa Session Store', function(){
               done();
             });
         });
-        it('should set the data', function(done){
-          db[sid] = JSON.stringify({ hello: 'world' });
+        it('should set the data', function(done) {
+          db[sid] = JSON.stringify({
+            hello: 'world'
+          });
 
           var app = App(options);
-          app.use(function *(){
-            this.session.message = 'hello3';
-            this.body = 'aklsdjflasdjf';
+          app.use(async(ctx, next) => {
+            ctx.session.message = 'hello3';
+            ctx.response.body = 'aklsdjflasdjf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -493,23 +499,26 @@ describe('Koa Session Store', function(){
             .expect(200, function(err, res) {
               if (err) return done(err);
               layer.saveCount.should.eql(1);
-              db[sid].should.eql(JSON.stringify({ hello: 'world', message: 'hello3'}));
+              db[sid].should.eql(JSON.stringify({
+                hello: 'world',
+                message: 'hello3'
+              }));
               done();
             });
         });
       });
     });
 
-    describe('when session = ', function(){
-      describe('null', function(){
-        it('should delete the data', function(done){
+    describe('when session = ', function() {
+      describe('null', function() {
+        it('should delete the data', function(done) {
           db = {};
           db[sid] = JSON.stringify('test');
 
           var app = App(options);
-          app.use(function *(){
-            this.session = null;
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = null;
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
@@ -520,11 +529,11 @@ describe('Koa Session Store', function(){
               done();
             });
         });
-        it('should expire the cookie', function(done){
+        it('should expire the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session = null;
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = null;
+            ctx.response.body = 'asdf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -534,31 +543,31 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('{}', function(){
-        it('should not set the cookie', function(done){
+      describe('{}', function() {
+        it('should not set the cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session = {};
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = {};
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               res.header.should.not.have.property('set-cookie');
               done();
             });
         });
-        it('should not set data', function(done){
+        it('should not set data', function(done) {
           db = {};
           var app = App(options);
-          app.use(function *(){
-            this.session = {};
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = {};
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
-            .expect(200, function(err, res){
+            .expect(200, function(err, res) {
               if (err) return done(err);
               db.should.eql({});
               done();
@@ -566,42 +575,48 @@ describe('Koa Session Store', function(){
         });
       });
 
-      describe('{a: b}', function(){
-        it('should set the session cookie', function(done){
+      describe('{a: b}', function() {
+        it('should set the session cookie', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session = { message: 'hello' };
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = {
+              message: 'hello'
+            };
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
             .expect('Set-Cookie', /koa:sess/)
             .expect(200, done);
         });
-        it('should set the session data', function(done){
+        it('should set the session data', function(done) {
           db = {};
 
           var app = App(options);
-          app.use(function *(){
-            this.session = { message: 'hello' };
-            this.body = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = {
+              message: 'hello'
+            };
+            ctx.response.body = 'asdf';
           })
           request(httpServer = app.listen())
             .get('/')
             .expect(200, function(err, res) {
               if (err) return done(err);
               for (var key in db) break;
-              db[key].should.eql(JSON.stringify({message: 'hello'}));
+              db[key].should.eql(JSON.stringify({
+                message: 'hello'
+              }));
               done();
             });
         });
       });
 
-      describe('anything else', function(){
-        it('should throw', function(done){
+      describe('anything else', function() {
+        it('should throw', function(done) {
           var app = App(options);
-          app.use(function *(){
-            this.session = 'asdf';
+          app.use(async(ctx, next) => {
+            ctx.session = 'asdf';
           });
           request(httpServer = app.listen())
             .get('/')
@@ -616,7 +631,7 @@ describe('Koa Session Store', function(){
 
 
 function App(options) {
-  var app = koa();
+  var app = new koa();
   app.keys = ['a', 'b'];
   app.use(session(options));
   return app;

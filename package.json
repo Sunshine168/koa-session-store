@@ -24,14 +24,15 @@
   "homepage": "https://github.com/hiddentao/koa-session-store",
   "devDependencies": {
     "gulp": "~3.9.1",
-    "gulp-mocha": "^2.2.0",
-    "koa": "~1.2.0",
-    "should": "~9.0.0",
-    "supertest": "~1.2.0"
+    "gulp-mocha": "^4.3.1",
+    "koa": "^2.2.0",
+    "should": "^11.2.1",
+    "supertest": "^3.0.0"
   },
   "dependencies": {
-    "uid2": "0.0.3",
-    "debug": "~2.2.0"
+    "debug": "~2.2.0",
+    "mocha": "^3.4.2",
+    "uid2": "0.0.3"
   },
   "engines": {
     "node": ">=4.4.0"

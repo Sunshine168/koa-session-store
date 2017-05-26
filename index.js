@@ -12,7 +12,7 @@ var uid = require('uid2');
  *
  * @return {Function} middleware.
  */
-module.exports = function(opts){
+module.exports = function(opts) {
   opts = opts || {};
 
   // key
@@ -26,22 +26,22 @@ module.exports = function(opts){
 
   debug('session options %j', opts);
 
-  return function *(next){
-    var session = new Session(this, opts);
-
-    this.session = yield session.load();
-
-    yield next;
-
-    if (!this.session) {
-      return yield session.remove();
+  return async function(ctx, next) {
+    var session = new Session(ctx, opts);
+    ctx.session = await session.load();
+    console.log(ctx.session)
+    try {
+      await next();
+    } catch (e) {
+      console.log(e);
+    }
+    if (!ctx.session) {
+      return await session.remove();
     }
 
-    yield session.save(this.session);
+    await session.save(ctx.session);
   }
 };
-
-
 
 
 
@@ -90,7 +90,7 @@ function Session(ctx, opts) {
  *
  * @api private
  */
-Session.prototype.load = function*() {
+Session.prototype.load = async function() {
   if ('cookie' === this._store) {
     // use the cookie itself as the store
     debug('use cookie as store');
@@ -99,7 +99,10 @@ Session.prototype.load = function*() {
     return this._json;
   } else {
     debug('load store for %d', this._sid);
-    this._prevSessionDataJSON = (yield this._store.load(this._sid)) || '{}';
+    this._prevSessionDataJSON = (await this._store.load(this._sid)) || '{}';
+    if (typeof this._prevSessionDataJSON === 'object') {
+      throw new Error('did not support Generator please use async/awiat , if you using koa-session-mongo, please update to koa2-session-mongo')
+    }
     return JSON.parse(this._prevSessionDataJSON);
   }
 };
@@ -116,7 +119,7 @@ Session.prototype.load = function*() {
  * @api private
  */
 
-Session.prototype.save = function*(newData) {
+Session.prototype.save = async function(newData) {
   // check session data is an object
   if ('object' !== typeof newData) {
     throw new Error('Session data must be a plain Object');
@@ -130,7 +133,7 @@ Session.prototype.save = function*(newData) {
     // if not cookie store then save the data
     if (!this._useCookieStore) {
       debug('save data to store for %d: %j', this._sid, newJSON);
-      yield this._store.save(this._sid, newJSON);
+      await this._store.save(this._sid, newJSON);
     }
     // if cookie store then cookie data = session data
     else {
@@ -155,13 +158,10 @@ Session.prototype.save = function*(newData) {
  * @api private
  */
 
-Session.prototype.remove = function*(){
+Session.prototype.remove = async function() {
   debug('remove');
   if (!this._useCookieStore) {
-    yield this._store.remove(this._sid);
+    await this._store.remove(this._sid);
   }
   this._ctx.cookies.set(this._name, '', this._cookieOpts);
 };
-
-
-
